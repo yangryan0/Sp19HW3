@@ -68,7 +68,7 @@ sudo mvn clean test -D HW=3
 
 If you haven't implemented anything, about 21 tests should error and the bottom of your output should look something like this:
 
-![Commands](hw3-testoutput.PNG)
+![Commands](hw3-testoutput.png)
 
 This lists the tests that failed. You will also see a "Build Failure" below this. When you don't pass all of the tests maven won't build your database. If a few additional tests fail try running the command again. If the problem persists then make a post on piazza.
 
