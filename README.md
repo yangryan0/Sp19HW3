@@ -65,7 +65,12 @@ run
 sudo mvn clean compile
 sudo mvn clean test -D HW=3
 ```
-There should be around 21 errors and 166 tests run.
+
+If you haven't implemented anything, about 21 tests should error and the bottom of your output should look something like this:
+
+![Commands](hw3-testoutput.PNG)
+
+This lists the tests that failed. You will also see a "Build Failure" below this. When you don't pass all of the tests maven won't build your database. If a few additional tests fail try running the command again. If the problem persists then make a post on piazza.
 
 Similar to HW2, you are free to use any text editor or IDE to complete the project, but **we
 will build and test your code in the docker container with maven**.
@@ -74,7 +79,16 @@ We recommend setting up a more local development environment by installing Java 
 
 If you can import the code as a maven project in your IDE and run your unit tests successfully, you do not need to install maven on your local computer. Most IDEs should provide this functionality by default, in Eclipse for example, you can do this: File > import > maven > existing maven project. If your IDE does not, there should be a way to install a Maven plugin which will give you this functionality.
 
+
 It bears repeating that even though you are free to complete the project in Eclipse or IntelliJ, **we will build and test your code in the docker container with maven**.
+
+
+#### Setting up IntelliJ to run a specific homework's tests
+
+If you are using IntelliJ, and wish to run the same tests as `mvn clean test -DHW=3`, open the appropriate
+link and follow the given instructions:
+
+[IntelliJ setup](intellij-test-setup.md)
 
 ## Step 2: Getting Familiar with the Release Code
 Navigate to the `Fa18HW3/src/main/java/edu/berkeley/cs186/database` directory. You
