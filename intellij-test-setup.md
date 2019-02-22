@@ -11,6 +11,6 @@ This document will help you set up IntelliJ for running a homework's tests
    ![filled in menu](intellij-filledin-configuration.png)
    - Name: HW3 tests (or whichever homework you're setting up)
    - Test kind: Category
-   - Category: edu.berkeley.cs186.database.categories.HW2Tests (or the category corresponding to the homework you're setting up)
+   - Category: edu.berkeley.cs186.database.categories.HW3Tests (or the category corresponding to the homework you're setting up)
    - Search for tests: In whole project
 4. You should now see HW3 tests in the dropdown in the top right. You can run/debug this configuration to run all the HW2 tests.
