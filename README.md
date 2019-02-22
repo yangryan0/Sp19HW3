@@ -1,5 +1,5 @@
 # Homework 3: Iterators and Join Algorithms
-**Due 11:59 PM Wednesday, October 17**
+**Due 11:59 PM Friday, March 15**
 
 ## Overview
 In this assignment, you will implement iterators and join algorithms over tables in Java. In this
@@ -30,13 +30,13 @@ cd cs186
 
 Clone the HW3 repo:
 ```
-git clone https://github.com/berkeley-cs186/Fa18HW3.git
+git clone https://github.com/berkeley-cs186/Sp19HW3.git
 ```
 If you get an error like: `Could not resolve host: github.com`, try restarting your docker machine (run `docker-machine restart` after exiting the docker container), and if that doesn't work restart your entire computer.
 
 If you get an error like fatal: could not create work tree dir: Permission denied, run
 ```
-sudo git clone https://github.com/berkeley-cs186/Fa18HW3.git
+sudo git clone https://github.com/berkeley-cs186/Sp19HW3.git
 ```
 
 
@@ -45,12 +45,12 @@ Before submitting your assignment you must run `mvn clean test` and ensure it wo
 
 
 ## Step 1: Getting Started with Java
-Navigate to the `Fa18HW3` directory. In the
+Navigate to the `Sp19HW3` directory. In the
 `src/main/java/edu/berkeley/cs186/database` directory, you will find all of the
 Java 8 code we have provided to you. In the
 `src/test/java/edu/berkeley/cs186/database` directory, you will find all of the
 unit tests we have provided to you. To build and test the code with maven, run
-the following in the `Fa18HW3` directory:
+the following in the `Sp19HW3` directory:
 
 ```bash
 mvn clean compile        # Compile the code.
@@ -58,7 +58,7 @@ mvn clean test -D HW=3   # Test the code. Not all tests will pass until you fini
 ```
 If you see this error:
 ```
-Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.2:compile (default-compile) on project database: Fatal error compiling: directory not found: /cs186/FallHW3/target/classes
+Failed to execute goal org.apache.maven.plugins:maven-compiler-plugin:3.2:compile (default-compile) on project database: Fatal error compiling: directory not found: /cs186/Sp19HW3/target/classes
 ```
 run
 ```
