@@ -167,9 +167,10 @@ In the hidden tests, we may test `SortMergeOperator` independently of `SortOpera
 
 ## Step 4: Submitting the Assignment
 To submit, make sure your are in your Sp19HW3 folder. Then run:
-
+```
 python3 turn_in.py --student-id <your_studentid_here> --assignment hw3
-but replace <your_studentid_here> with your actual student ID (not your edx username!). This will generate a zip file called hw3.zip which you should then upload to edx.
+```
+but replace `<your_studentid_here>` with your actual student ID (not your edx username!). This will generate a zip file called `hw3.zip` which you should then upload to edx.
 
 [eclipse_maven]: https://stackoverflow.com/a/36242422
 [intellij_maven]: https://www.jetbrains.com/help/idea//2017.1/importing-project-from-maven-model.html
