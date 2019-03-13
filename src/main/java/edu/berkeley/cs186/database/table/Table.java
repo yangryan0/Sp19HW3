@@ -490,6 +490,14 @@ public class Table implements Closeable {
      */
     public class RIDPageIterator implements BacktrackingIterator<RecordId> {
         //member variables go here
+        byte[] bm;
+        int index;
+        int limit;
+        int pageNum;
+        boolean marked;
+        int mark_index;
+        int entries_found;
+        int mark_entries_found;
 
         /**
         * The following method signature is provided for guidance, but not necessary. Feel free to
@@ -499,23 +507,51 @@ public class Table implements Closeable {
         // You do not need to manipulate the transaction parameter, just pass it
         // into any method that requires a transaction that you need to call.
         public RIDPageIterator(BaseTransaction transaction, Page page) {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            bm = getBitMap(transaction, page);
+            index = 0;
+            limit = numRecordsOnPage(transaction, page);
+            pageNum = page.getPageNum();
+            marked = false;
+            mark_index = 0;
+            mark_entries_found = 0;
+            entries_found = 0;
         }
 
         public boolean hasNext() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            if (index >= bm.length * 8) {
+                return false;
+            }
+            int next_index = index;
+            while (Bits.getBit(bm, next_index) == Bits.Bit.ZERO && entries_found + 1 <= limit && next_index < bm.length * 8) {
+                next_index++;
+            }
+            if (entries_found + 1 > limit || next_index >= bm.length * 8) {
+                return false;
+            }
+            return true;
         }
 
         public RecordId next() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            while (Bits.getBit(bm, index) == Bits.Bit.ZERO) {
+                index++;
+            }
+            RecordId ret_val = new RecordId(pageNum, (short) index);
+            entries_found++;
+            index++;
+            return ret_val;
         }
 
         public void mark() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            marked = true;
+            mark_index = (index - 1);
+            mark_entries_found = (entries_found - 1);
         }
 
         public void reset() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            if (marked) {
+                index = mark_index;
+                entries_found = mark_entries_found;
+            }
         }
     }
 
@@ -587,9 +623,6 @@ public class Table implements Closeable {
         RIDBlockIterator(BaseTransaction transaction, BacktrackingIterator<Page> pageIter) {
             this.transaction = transaction;
             this.pageIter = pageIter;
-
-            throw new UnsupportedOperationException("TODO(hw3): implement");
-            //if you want to add anything to this constructor, feel free to
         }
 
         /**
@@ -626,11 +659,28 @@ public class Table implements Closeable {
         }
 
         public boolean hasNext() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            if (recordIter == null || !recordIter.hasNext()) {
+                return pageIter.hasNext();
+            } else {
+                return true;
+            }
         }
 
         public RecordId next() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            prevRecordIter = recordIter;
+            if (recordIter == null || !recordIter.hasNext()) {
+                if (pageIter.hasNext()) {
+                    recordIter = new RIDPageIterator(transaction, pageIter.next());
+                    while (!recordIter.hasNext()) {
+                        recordIter = new RIDPageIterator(transaction, pageIter.next());
+                    }
+                    return recordIter.next();
+                } else {
+                    return null;
+                }
+            } else {
+                return recordIter.next();
+            }
         }
 
         /**
