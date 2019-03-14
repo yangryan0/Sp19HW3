@@ -122,8 +122,8 @@ public class BNLJOperator extends JoinOperator {
                     } else {
                         try {
                             fetchNextRightPage();
-                            this.rightRecordIterator.mark();
                             this.rightRecord = rightRecordIterator.next();
+                            this.rightRecordIterator.mark();
                             leftRecordIterator.reset();
                             this.leftRecord = leftRecordIterator.next();
                         } catch (DatabaseException e) {

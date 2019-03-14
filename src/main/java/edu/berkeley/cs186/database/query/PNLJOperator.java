@@ -85,11 +85,7 @@ public class PNLJOperator extends JoinOperator {
             if (this.rightRecord != null) {
                 this.rightRecordIterator.mark();
             }
-            try {
-                fetchNextRecord();
-            } catch (DatabaseException e) {
-                return;
-            }
+            fetchNextRecord();
         }
 
         private void fetchNextRecord() throws DatabaseException{
@@ -114,8 +110,8 @@ public class PNLJOperator extends JoinOperator {
                     } else {
                         try {
                             fetchNextRightPage();
-                            this.rightRecordIterator.mark();
                             this.rightRecord = rightRecordIterator.next();
+                            this.rightRecordIterator.mark();
                             leftRecordIterator.reset();
                             this.leftRecord = leftRecordIterator.next();
                         } catch (DatabaseException e) {
