@@ -7,7 +7,9 @@ import edu.berkeley.cs186.database.DatabaseException;
 import edu.berkeley.cs186.database.common.BacktrackingIterator;
 import edu.berkeley.cs186.database.databox.DataBox;
 import edu.berkeley.cs186.database.io.Page;
+import edu.berkeley.cs186.database.io.PageAllocator;
 import edu.berkeley.cs186.database.table.Record;
+import edu.berkeley.cs186.database.table.RecordIterator;
 
 public class PNLJOperator extends JoinOperator {
     public PNLJOperator(QueryOperator leftSource,
@@ -56,17 +58,101 @@ public class PNLJOperator extends JoinOperator {
          * You're free to use these member variables, but you're not obligated to.
          */
 
-        //private Iterator<Page> leftIterator = null;
-        //private Iterator<Page> rightIterator = null;
-        //private BacktrackingIterator<Record> leftRecordIterator = null;
-        //private BacktrackingIterator<Record> rightRecordIterator = null;
-        //private Record leftRecord = null;
-        //private Record nextRecord = null;
+        private BacktrackingIterator<Page> leftIterator = null;
+        private BacktrackingIterator<Page> rightIterator = null;
+        private BacktrackingIterator<Record> leftRecordIterator = null;
+        private BacktrackingIterator<Record> rightRecordIterator = null;
+        private Record leftRecord = null;
+        private Record rightRecord = null;
+        private Record nextRecord = null;
 
         public PNLJIterator() throws QueryPlanException, DatabaseException {
             super();
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            this.leftIterator = getTransaction().getPageIterator(this.getLeftTableName());
+            this.rightIterator = getTransaction().getPageIterator(this.getRightTableName());
+            this.leftIterator.next();
+            this.rightIterator.next();
+            this.leftRecordIterator = PNLJOperator.this.getBlockIterator(this.getLeftTableName(), this.leftIterator, 1);
+            this.rightRecordIterator = PNLJOperator.this.getBlockIterator(this.getRightTableName(), this.rightIterator, 1);
+            rightIterator.mark();
+            this.leftRecord = this.leftRecordIterator.hasNext() ? this.leftRecordIterator.next() : null;
+            this.rightRecord = this.rightRecordIterator.hasNext() ? this.rightRecordIterator.next() : null;
+            if (this.leftRecord != null) {
+                this.leftRecordIterator.mark();
+            } else {
+                return;
+            }
+            if (this.rightRecord != null) {
+                this.rightRecordIterator.mark();
+            }
+            try {
+                fetchNextRecord();
+            } catch (DatabaseException e) {
+                return;
+            }
         }
+
+        private void fetchNextRecord() throws DatabaseException{
+            if (this.leftRecord == null) {throw new DatabaseException("No new record to fetch");}
+            this.nextRecord = null;
+            do {
+                if (this.rightRecord != null) {
+                    DataBox leftJoinValue = this.leftRecord.getValues().get(PNLJOperator.this.getLeftColumnIndex());
+                    DataBox rightJoinValue = rightRecord.getValues().get(PNLJOperator.this.getRightColumnIndex());
+                    if (leftJoinValue.equals(rightJoinValue)) {
+                        List<DataBox> leftValues = new ArrayList<>(this.leftRecord.getValues());
+                        List<DataBox> rightValues = new ArrayList<>(rightRecord.getValues());
+                        leftValues.addAll(rightValues);
+                        this.nextRecord = new Record(leftValues);
+                    }
+                    this.rightRecord = rightRecordIterator.hasNext() ? rightRecordIterator.next() : null;
+                } else {
+                    if (this.leftRecordIterator.hasNext()) {
+                        rightRecordIterator.reset();
+                        this.leftRecord = leftRecordIterator.next();
+                        this.rightRecord = rightRecordIterator.next();
+                    } else {
+                        try {
+                            fetchNextRightPage();
+                            this.rightRecordIterator.mark();
+                            this.rightRecord = rightRecordIterator.next();
+                            leftRecordIterator.reset();
+                            this.leftRecord = leftRecordIterator.next();
+                        } catch (DatabaseException e) {
+                            rightIterator.reset();
+                            rightRecordIterator = PNLJOperator.this.getBlockIterator(this.getRightTableName(), this.rightIterator, 1);
+                            this.rightRecord = rightRecordIterator.next();
+                            this.rightRecordIterator.mark();
+                            try {
+                                fetchNextLeftPage();
+                                this.leftRecord = leftRecordIterator.next();
+                                this.leftRecordIterator.mark();
+                            } catch (DatabaseException t) {
+                                this.nextRecord = null;
+                                return;
+                            }
+                        }
+                    }
+                }
+            } while (!hasNext());
+        }
+
+        public void fetchNextRightPage() throws DatabaseException{
+            if (rightIterator.hasNext()) {
+                rightRecordIterator = PNLJOperator.this.getBlockIterator(this.getRightTableName(), this.rightIterator, 1);
+            } else {
+                throw new DatabaseException("No more right pages.");
+            }
+        }
+
+        public void fetchNextLeftPage() throws DatabaseException{
+            if (leftIterator.hasNext()) {
+                leftRecordIterator = PNLJOperator.this.getBlockIterator(this.getLeftTableName(), this.leftIterator, 1);
+            } else {
+                throw new DatabaseException("No more left pages.");
+            }
+        }
+
 
         /**
          * Checks if there are more record(s) to yield
@@ -74,7 +160,7 @@ public class PNLJOperator extends JoinOperator {
          * @return true if this iterator has another record to yield, otherwise false
          */
         public boolean hasNext() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            return this.nextRecord != null;
         }
 
         /**
@@ -84,7 +170,14 @@ public class PNLJOperator extends JoinOperator {
          * @throws NoSuchElementException if there are no more Records to yield
          */
         public Record next() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            if (!hasNext()) {throw new NoSuchElementException();}
+            Record nextRecord = this.nextRecord;
+            try {
+                fetchNextRecord();
+            } catch (DatabaseException e) {
+                this.nextRecord = null;
+            }
+            return nextRecord;
         }
 
         public void remove() {

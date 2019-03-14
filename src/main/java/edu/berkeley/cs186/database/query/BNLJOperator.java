@@ -66,16 +66,99 @@ public class BNLJOperator extends JoinOperator {
          * You're free to use these member variables, but you're not obligated to.
          */
 
-        //private Iterator<Page> leftIterator = null;
-        //private Iterator<Page> rightIterator = null;
-        //private BacktrackingIterator<Record> leftRecordIterator = null;
-        //private BacktrackingIterator<Record> rightRecordIterator = null;
-        //private Record leftRecord = null;
-        //private Record nextRecord = null;
+        private BacktrackingIterator<Page> leftIterator = null;
+        private BacktrackingIterator<Page> rightIterator = null;
+        private BacktrackingIterator<Record> leftRecordIterator = null;
+        private BacktrackingIterator<Record> rightRecordIterator = null;
+        private Record leftRecord = null;
+        private Record rightRecord = null;
+        private Record nextRecord = null;
 
         public BNLJIterator() throws QueryPlanException, DatabaseException {
             super();
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            this.leftIterator = getTransaction().getPageIterator(this.getLeftTableName());
+            this.rightIterator = getTransaction().getPageIterator(this.getRightTableName());
+            this.leftIterator.next();
+            this.rightIterator.next();
+            this.leftRecordIterator = BNLJOperator.this.getBlockIterator(this.getLeftTableName(), this.leftIterator, getTransaction().getNumMemoryPages());
+            this.rightRecordIterator = BNLJOperator.this.getBlockIterator(this.getRightTableName(), this.rightIterator, 1);
+            rightIterator.mark();
+            this.leftRecord = this.leftRecordIterator.hasNext() ? this.leftRecordIterator.next() : null;
+            this.rightRecord = this.rightRecordIterator.hasNext() ? this.rightRecordIterator.next() : null;
+            if (this.leftRecord != null) {
+                this.leftRecordIterator.mark();
+            } else {
+                return;
+            }
+            if (this.rightRecord != null) {
+                this.rightRecordIterator.mark();
+            }
+            try {
+                fetchNextRecord();
+            } catch (DatabaseException e) {
+                return;
+            }
+        }
+
+        private void fetchNextRecord() throws DatabaseException{
+            if (this.leftRecord == null) {throw new DatabaseException("No new record to fetch");}
+            this.nextRecord = null;
+            do {
+                if (this.rightRecord != null) {
+                    DataBox leftJoinValue = this.leftRecord.getValues().get(BNLJOperator.this.getLeftColumnIndex());
+                    DataBox rightJoinValue = rightRecord.getValues().get(BNLJOperator.this.getRightColumnIndex());
+                    if (leftJoinValue.equals(rightJoinValue)) {
+                        List<DataBox> leftValues = new ArrayList<>(this.leftRecord.getValues());
+                        List<DataBox> rightValues = new ArrayList<>(rightRecord.getValues());
+                        leftValues.addAll(rightValues);
+                        this.nextRecord = new Record(leftValues);
+                    }
+                    this.rightRecord = rightRecordIterator.hasNext() ? rightRecordIterator.next() : null;
+                } else {
+                    if (this.leftRecordIterator.hasNext()) {
+                        rightRecordIterator.reset();
+                        this.leftRecord = leftRecordIterator.next();
+                        this.rightRecord = rightRecordIterator.next();
+                    } else {
+                        try {
+                            fetchNextRightPage();
+                            this.rightRecordIterator.mark();
+                            this.rightRecord = rightRecordIterator.next();
+                            leftRecordIterator.reset();
+                            this.leftRecord = leftRecordIterator.next();
+                        } catch (DatabaseException e) {
+                            rightIterator.reset();
+                            rightRecordIterator = BNLJOperator.this.getBlockIterator(this.getRightTableName(), this.rightIterator, 1);
+                            this.rightRecord = rightRecordIterator.next();
+                            this.rightRecordIterator.mark();
+                            try {
+                                fetchNextLeftPage();
+                                this.leftRecord = leftRecordIterator.next();
+                                this.leftRecordIterator.mark();
+                            } catch (DatabaseException t) {
+                                this.nextRecord = null;
+                                return;
+                            }
+                        }
+                    }
+                }
+            } while (!hasNext());
+        }
+
+        public void fetchNextRightPage() throws DatabaseException{
+            if (rightIterator.hasNext()) {
+                rightRecordIterator = BNLJOperator.this.getBlockIterator(this.getRightTableName(), this.rightIterator, 1);
+            } else {
+                throw new DatabaseException("No more right pages.");
+            }
+        }
+
+        public void fetchNextLeftPage() throws DatabaseException{
+            if (leftIterator.hasNext()) {
+                leftRecordIterator = BNLJOperator.this.getBlockIterator(this.getLeftTableName(), this.leftIterator, getTransaction().getNumMemoryPages());
+            } else {
+                throw new DatabaseException("No more left pages.");
+            }
         }
 
         /**
@@ -84,7 +167,7 @@ public class BNLJOperator extends JoinOperator {
          * @return true if this iterator has another record to yield, otherwise false
          */
         public boolean hasNext() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+            return this.nextRecord != null;
         }
 
         /**
@@ -93,8 +176,15 @@ public class BNLJOperator extends JoinOperator {
          * @return the next Record
          * @throws NoSuchElementException if there are no more Records to yield
          */
-        public Record next() {
-            throw new UnsupportedOperationException("TODO(hw3): implement");
+        public Record next(){
+            if (!hasNext()) {throw new NoSuchElementException();}
+            Record nextRecord = this.nextRecord;
+            try {
+                fetchNextRecord();
+            } catch (DatabaseException e) {
+                this.nextRecord = null;
+            }
+            return nextRecord;
         }
 
         public void remove() {

@@ -612,6 +612,8 @@ public class Table implements Closeable {
         private BacktrackingIterator<Page> pageIter;
 
         private RecordId nextRecordId = null;
+        private RecordId markedNextRecordId = null;
+        private RecordId prevRecordId = null;
         private BacktrackingIterator<RecordId> recordIter = null;
         private BacktrackingIterator<RecordId> prevRecordIter = null;
         private BacktrackingIterator<RecordId> markedPrevRecordIter = null;
@@ -623,6 +625,16 @@ public class Table implements Closeable {
         RIDBlockIterator(BaseTransaction transaction, BacktrackingIterator<Page> pageIter) {
             this.transaction = transaction;
             this.pageIter = pageIter;
+            if (this.pageIter.hasNext()) {
+                this.recordIter = new RIDPageIterator(transaction, this.pageIter.next());
+            } else {
+                return;
+            }
+            try {
+                fetchRecordID();
+            } catch (NoSuchElementException e) {
+                this.nextRecordId = null;
+            }
         }
 
         /**
@@ -659,28 +671,39 @@ public class Table implements Closeable {
         }
 
         public boolean hasNext() {
-            if (recordIter == null || !recordIter.hasNext()) {
-                return pageIter.hasNext();
-            } else {
-                return true;
-            }
+            return nextRecordId != null;
+        }
+
+        public void fetchRecordID() {
+            nextRecordId = null;
+            do {
+                if (recordIter.hasNext()) {
+                    nextRecordId = recordIter.next();
+                } else {
+                    if (pageIter.hasNext()) {
+                        Page next_page = pageIter.next();
+                        recordIter = new RIDPageIterator(transaction, next_page);
+                        nextRecordId = recordIter.next();
+                    } else {
+                        throw new NoSuchElementException();
+                    }
+                }
+            } while (!hasNext());
         }
 
         public RecordId next() {
-            prevRecordIter = recordIter;
-            if (recordIter == null || !recordIter.hasNext()) {
-                if (pageIter.hasNext()) {
-                    recordIter = new RIDPageIterator(transaction, pageIter.next());
-                    while (!recordIter.hasNext()) {
-                        recordIter = new RIDPageIterator(transaction, pageIter.next());
-                    }
-                    return recordIter.next();
-                } else {
-                    return null;
-                }
-            } else {
-                return recordIter.next();
+            if (!hasNext()) {
+                throw new NoSuchElementException();
             }
+            RecordId nextRecordId = this.nextRecordId;
+            prevRecordId = this.nextRecordId;
+            try {
+                fetchRecordID();
+            } catch(NoSuchElementException e) {
+                this.nextRecordId = null;
+            }
+            prevRecordIter = recordIter;
+            return nextRecordId;
         }
 
         /**
@@ -696,6 +719,7 @@ public class Table implements Closeable {
             this.pageIter.mark();
             this.prevRecordIter.mark();
             this.markedPrevRecordIter = this.prevRecordIter;
+            this.markedNextRecordId = this.prevRecordId;
         }
 
         /**
@@ -714,6 +738,7 @@ public class Table implements Closeable {
             this.prevRecordIter = null;
             this.recordIter = this.markedPrevRecordIter;
             this.recordIter.reset();
+            this.nextRecordId = this.markedNextRecordId;
         }
     }
 
