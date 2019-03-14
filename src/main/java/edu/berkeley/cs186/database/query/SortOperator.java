@@ -143,7 +143,6 @@ public class SortOperator {
             }
             sorted_runs.add(sortRun(curr_run));
         }
-        System.out.println(sorted_runs);
         return mergeSortedRuns(sorted_runs).tableName();
     }
 
